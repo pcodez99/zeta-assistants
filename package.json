@@ -7,7 +7,8 @@
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "bootstrap": "docker compose up -d || true && (sleep 3 || true) && cp -n apps/backend/.env.example apps/backend/.env || true && pnpm install && pnpm --filter backend prisma:generate && pnpm --filter backend prisma:deploy && pnpm build"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
