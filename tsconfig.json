@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/schema" },
+    { "path": "packages/domain" },
+    { "path": "packages/storage" },
+    { "path": "apps/backend" },
+    { "path": "apps/frontend" }
+  ]
+}

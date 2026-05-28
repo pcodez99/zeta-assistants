@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+  superadmin
+}
+
+model User {
+  id                     String               @id @default(cuid())
+  email                  String               @unique
+  username               String               @unique
+  password               String
+  name                   String
+  image                  String?
+  role                   Role                 @default(user)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  sessions               Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id                 String   @id @default(cuid())
+  userId             String
+  deviceId           String?
+  hashedRefreshToken String
+  ip                 String?
+  userAgent          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model SensorReading {
+  id          String   @id @default(cuid())
+  temperature Float
+  humidity    Float
+  pressure    Float
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("sensor_reading")
+}
+
+model SystemSettings {
+  id           String   @id @default("global")
+  esp32Address String   @default("192.168.1.100")
+  updatedAt    DateTime @updatedAt
+
+  @@map("system_settings")
+}

@@ -1,0 +1,91 @@
+# ==============================================================================
+# Node.js & Package Managers
+# ==============================================================================
+node_modules/
+/dist/
+/build/
+/out/
+.npm
+.eslintcache
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+npm-debug.log*
+
+# ==============================================================================
+# Monorepo & Turborepo
+# ==============================================================================
+.turbo/
+
+# ==============================================================================
+# Apps & Packages Specific Builds
+# ==============================================================================
+apps/frontend/dist/
+apps/backend/dist/
+packages/*/dist/
+packages/*/build/
+
+# ==============================================================================
+# Security & Environment Secrets (CRITICAL for Open Source)
+# ==============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*.env.local
+!*.env.example
+
+# ==============================================================================
+# Prisma & Databases
+# ==============================================================================
+/apps/backend/prisma/dev.db
+/apps/backend/prisma/dev.db-journal
+
+# ==============================================================================
+# Firmware: Arduino / ESP32 / PlatformIO Build Artifacts
+# ==============================================================================
+# PlatformIO folders
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+
+# Arduino IDE compilation outputs
+firmware/**/build/
+firmware/**/bin/
+*.elf
+*.hex
+*.bin
+
+# ==============================================================================
+# IDEs, Editors & OS Files
+# ==============================================================================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+
+# Visual Studio Code / Cursor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.history/
+
+# JetBrains (WebStorm, IntelliJ, etc.)
+.idea/
+
+# Local backup / swap files
+*.swp
+*.swo
+*~
