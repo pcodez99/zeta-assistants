@@ -1,21 +1,21 @@
 import { join } from 'node:path';
 import { config } from 'dotenv';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 
 // Load environment variables
 config({ path: join(process.cwd(), '.env') });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: true,
   });
 
   app.setGlobalPrefix('api');
 
-  const { json, urlencoded } = require('body-parser');
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ extended: true, limit: '10mb' }));
+  app.useBodyParser('json', { limit: '10mb' });
+  app.useBodyParser('urlencoded', { extended: true, limit: '10mb' });
 
   const configuredOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:3001',
