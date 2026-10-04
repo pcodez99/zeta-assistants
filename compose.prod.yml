@@ -34,7 +34,7 @@ services:
       REFRESH_JWT_SECRET: "${REFRESH_JWT_SECRET:?REFRESH_JWT_SECRET is required}"
       REFRESH_JWT_EXPIRES_IN: 7d
       WEATHER_API_KEY: "${WEATHER_API_KEY:?WEATHER_API_KEY is required}"
-      FRONTEND_URL: https://assistants.zetalinks.it
+      FRONTEND_URL: https://assistant.zetalinks.it
     ports:
       - "127.0.0.1:9522:3000"
     depends_on:

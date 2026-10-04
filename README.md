@@ -106,7 +106,7 @@ The deployment follows the glucose layout:
 - PostgreSQL 17 in Docker with persistent `assistants_postgres_data` volume,
   on a private internal network with no published database port.
 - App bound to `127.0.0.1:9522`, served by OpenLiteSpeed at
-  `https://assistants.zetalinks.it`.
+  `https://assistant.zetalinks.it`.
 - Liveness and database check: `GET /api/health`.
 
 Required environment variables are `POSTGRES_PASSWORD`, `JWT_SECRET`,
