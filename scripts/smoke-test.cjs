@@ -22,6 +22,12 @@ async function run() {
   assert.equal((await call("/health")).status, 200);
   assert.equal((await fetch(base)).status, 200);
   assert.equal((await call("/weather/latest")).status, 401);
+  const google = await call("/auth/google/login", { redirect: "manual" });
+  assert.equal(google.status, 302);
+  const googleUrl = new URL(google.headers.get("location"));
+  assert.equal(googleUrl.hostname, "accounts.google.com");
+  assert.equal(googleUrl.searchParams.get("redirect_uri"), process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/api/auth/google/callback");
+  assert.equal(googleUrl.searchParams.get("response_type"), "code");
   const measurement = { temperature: 22.5, humidity: 55, pressure: 1013.2 };
   assert.equal((await call("/weather/report", { method: "POST", body: JSON.stringify(measurement) })).status, 401);
   const headers = { "x-api-key": process.env.WEATHER_API_KEY };

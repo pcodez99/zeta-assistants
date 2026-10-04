@@ -80,6 +80,13 @@ jobs:
           --exclude .git/
           --filter=':- .gitignore'
           ./ "deployuser@$SSH_HOST:/opt/assistants/app/"
+      - name: Configure Google OAuth
+        env:
+          SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          python3 -c 'import json,os; print(json.dumps({key: os.environ[key] for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")}))' | ssh "deployuser@$SSH_HOST" 'python3 /opt/assistants/app/scripts/configure-google-oauth.py'
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}

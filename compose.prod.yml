@@ -34,6 +34,9 @@ services:
       REFRESH_JWT_SECRET: "${REFRESH_JWT_SECRET:?REFRESH_JWT_SECRET is required}"
       REFRESH_JWT_EXPIRES_IN: 7d
       WEATHER_API_KEY: "${WEATHER_API_KEY:?WEATHER_API_KEY is required}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:?GOOGLE_CLIENT_SECRET is required}"
+      GOOGLE_CALLBACK_URL: https://assistant.zetalinks.it/api/auth/google/callback
       FRONTEND_URL: https://assistant.zetalinks.it
     ports:
       - "127.0.0.1:9522:3000"
