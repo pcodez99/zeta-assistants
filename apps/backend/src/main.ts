@@ -27,7 +27,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.length === 0 || process.env.NODE_ENV === 'production') {
+      if (!origin || allowedOrigins.length === 0) {
         callback(null, true);
         return;
       }

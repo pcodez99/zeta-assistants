@@ -13,7 +13,7 @@ export class WeatherController {
     @Headers('x-api-key') apiKey: string,
     @Body() body: SensorReportInput,
   ) {
-    const configuredApiKey = process.env.WEATHER_API_KEY || 'super-secret-esp32-api-key';
+    const configuredApiKey = process.env.WEATHER_API_KEY;
     if (!apiKey || apiKey !== configuredApiKey) {
       throw new UnauthorizedException('Invalid or missing weather API key');
     }
@@ -24,6 +24,11 @@ export class WeatherController {
     }
 
     return this.weatherService.recordReading(validation.data);
+  }
+
+  @Get('latest')
+  async getLatest() {
+    return { reading: await this.weatherService.getLatest() };
   }
 
   @Get('history')

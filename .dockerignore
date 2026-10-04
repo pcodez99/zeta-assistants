@@ -1,0 +1,8 @@
+.git
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+**/.env*
+firmware
+.DS_Store

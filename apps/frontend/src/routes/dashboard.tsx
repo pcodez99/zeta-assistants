@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { 
@@ -10,12 +10,6 @@ import {
   Calendar, CloudSun, CheckCircle, XCircle, Loader2
 } from 'lucide-react';
 
-interface WeatherMetrics {
-  temperature: number;
-  humidity: number;
-  pressure: number;
-}
-
 interface HistoricalReading {
   id: string;
   temperature: number;
@@ -26,77 +20,22 @@ interface HistoricalReading {
 
 export const Dashboard: React.FC = () => {
   const [range, setRange] = useState<'24h' | '7d' | '30d'>('24h');
-  const [esp32Address, setEsp32Address] = useState<string | null>(null);
-  const [liveData, setLiveData] = useState<WeatherMetrics | null>(null);
-  const [liveLoading, setLiveLoading] = useState(false);
-  const [liveError, setLiveError] = useState<boolean>(false);
-
-  // 1. Fetch system settings to get ESP32 IP
-  const { data: _settings } = useQuery({
-    queryKey: ['settings'],
-    queryFn: async () => {
-      const { data } = await api.get('/settings');
-      setEsp32Address(data.esp32Address);
-      return data;
-    },
+  const { data: latest, isFetching: liveLoading, isError: liveError, refetch: fetchLiveReading } = useQuery<{ reading: HistoricalReading | null }>({
+    queryKey: ['weather-latest'],
+    queryFn: async () => (await api.get('/weather/latest')).data,
+    refetchInterval: 10000,
   });
+  const liveData = latest?.reading ?? null;
+  const isRecent = liveData && Date.now() - new Date(liveData.createdAt).getTime() < 10 * 60 * 1000;
+  const lastReadingLabel = liveData
+    ? `Ricevuto: ${new Date(liveData.createdAt).toLocaleString('it-IT')}`
+    : 'In attesa del primo invio';
 
-  // 2. Fetch historical weather data from backend
-  const { data: history, isLoading: historyLoading, refetch: refetchHistory } = useQuery<HistoricalReading[]>({
+  const { data: history, isLoading: historyLoading, isError: historyError, refetch: refetchHistory } = useQuery<HistoricalReading[]>({
     queryKey: ['history', range],
-    queryFn: async () => {
-      const { data } = await api.get(`/weather/history?range=${range}`);
-      return data;
-    },
+    queryFn: async () => (await api.get(`/weather/history?range=${range}`)).data,
+    refetchInterval: 60000,
   });
-
-  // 3. Poll live data directly from the ESP32 local IP
-  const fetchLiveReading = async () => {
-    if (!esp32Address) return;
-    setLiveLoading(true);
-    setLiveError(false);
-
-    try {
-      // Direct call to ESP32 on the local network
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      // Standard ESP32 returns a JSON with temperature, humidity, pressure
-      const response = await fetch(`http://${esp32Address}/data`, {
-        signal: controller.signal,
-        mode: 'cors',
-      });
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error('ESP32 error');
-      const data = await response.json();
-      setLiveData({
-        temperature: Number(data.temperature),
-        humidity: Number(data.humidity),
-        pressure: Number(data.pressure),
-      });
-    } catch (err) {
-      console.warn('Could not contact ESP32 directly. Displaying mock/fallback data for demo.', err);
-      setLiveError(true);
-      // Fallback/Mock data to ensure beautiful UI even if ESP32 is offline during setup
-      setLiveData({
-        temperature: 23.4,
-        humidity: 48.2,
-        pressure: 1015.6,
-      });
-    } finally {
-      setLiveLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (esp32Address) {
-      fetchLiveReading();
-      // Poll ESP32 every 10 seconds for real-time dashboard data
-      const interval = setInterval(fetchLiveReading, 10000);
-      return () => clearInterval(interval);
-    }
-  }, [esp32Address]);
 
   // Format date for chart X-Axis
   const formatXAxis = (tickItem: string) => {
@@ -130,7 +69,7 @@ export const Dashboard: React.FC = () => {
           </h1>
           <p className="text-muted-foreground text-sm flex items-center gap-1.5">
             <Activity className="h-4 w-4 text-green-500" />
-            Dashboard stazione meteorologica locale
+            Dashboard stazione meteorologica
           </p>
         </div>
 
@@ -138,22 +77,22 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl backdrop-blur-md">
           <div className="flex items-center gap-1.5 text-xs font-semibold">
             <Cpu className="h-4 w-4 text-muted-foreground" />
-            <span>ESP32 ({esp32Address || 'Nessun IP'}):</span>
+            <span>ESP32:</span>
           </div>
           {liveError ? (
             <div className="flex items-center gap-1 text-xs text-amber-500 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
               <XCircle className="h-3.5 w-3.5" />
-              Non Raggiungibile (Local Mock)
+              Server non raggiungibile
             </div>
-          ) : esp32Address ? (
+          ) : isRecent ? (
             <div className="flex items-center gap-1 text-xs text-green-500 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20">
               <CheckCircle className="h-3.5 w-3.5 animate-pulse" />
-              Connesso (LAN)
+              Dati recenti
             </div>
           ) : (
             <div className="flex items-center gap-1 text-xs text-red-500 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/20">
               <XCircle className="h-3.5 w-3.5" />
-              Non Configurato
+              {liveData ? 'Dati non aggiornati' : 'In attesa di dati'}
             </div>
           )}
           <button
@@ -189,7 +128,7 @@ export const Dashboard: React.FC = () => {
             </span>
             <span className="text-lg font-semibold text-muted-foreground">°C</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Dato istantaneo da ESP32</p>
+          <p className="text-xs text-muted-foreground mt-2">{lastReadingLabel}</p>
         </div>
 
         {/* Humidity Card */}
@@ -209,7 +148,7 @@ export const Dashboard: React.FC = () => {
             </span>
             <span className="text-lg font-semibold text-muted-foreground">%</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Dato istantaneo da ESP32</p>
+          <p className="text-xs text-muted-foreground mt-2">{lastReadingLabel}</p>
         </div>
 
         {/* Pressure Card */}
@@ -229,7 +168,7 @@ export const Dashboard: React.FC = () => {
             </span>
             <span className="text-lg font-semibold text-muted-foreground">hPa</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">Dato istantaneo da ESP32</p>
+          <p className="text-xs text-muted-foreground mt-2">{lastReadingLabel}</p>
         </div>
       </div>
 
@@ -263,6 +202,8 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center justify-center min-h-[300px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
+        ) : historyError ? (
+          <p role="alert">Impossibile caricare lo storico. Riprova tra poco.</p>
         ) : history && history.length > 0 ? (
           <div className="space-y-8">
             {/* Chart 1: Temperature & Humidity */}
@@ -352,7 +293,7 @@ export const Dashboard: React.FC = () => {
             <CloudSun className="h-12 w-12 text-muted-foreground mb-3 animate-pulse" />
             <h3 className="font-semibold mb-1">Nessun dato storico trovato</h3>
             <p className="text-xs text-muted-foreground max-w-sm">
-              L'ESP32 non ha ancora caricato dati storici sul database. Configura l'IP ed effettua chiamate POST dal dispositivo a <code>/api/weather/report</code> con la tua API Key.
+              Lo storico apparirà dopo il primo invio della stazione meteo al server.
             </p>
           </div>
         )}

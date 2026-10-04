@@ -16,6 +16,12 @@ export class WeatherService {
     }) as unknown as Promise<SensorReading>;
   }
 
+  async getLatest() {
+    return this.prisma.client.sensorReading.findFirst({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async getHistory(range: string): Promise<SensorReading[]> {
     let since = new Date();
     let downsampleRate = 1; // Take every Nth reading

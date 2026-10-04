@@ -1,0 +1,86 @@
+name: Deploy Webtropia
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-webtropia
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: assistants
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: assistants_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U assistants -d assistants_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://assistants:ci-only-password@localhost:5432/assistants_test?schema=public
+      JWT_SECRET: ci-only-access-token-signing-secret
+      JWT_EXPIRES_IN: 15m
+      REFRESH_JWT_SECRET: ci-only-refresh-token-signing-secret
+      REFRESH_JWT_EXPIRES_IN: 7d
+      WEATHER_API_KEY: ci-only-weather-api-key
+      NODE_ENV: test
+      FRONTEND_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: git diff --check
+      - run: pnpm --filter backend prisma:deploy
+      - name: Verify API and ingestion
+        run: |
+          pnpm --filter backend start:prod > /tmp/assistants-api.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health >/dev/null; then break; fi
+            sleep 1
+          done
+          if ! pnpm --filter backend exec node ../../scripts/smoke-test.cjs; then
+            cat /tmp/assistants-api.log
+            exit 1
+          fi
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-24.04
+    environment: Production
+    steps:
+      - uses: actions/checkout@v6
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.WEBTROPIA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.WEBTROPIA_SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_KNOWN_HOSTS" && test -n "$SSH_HOST"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Upload release
+        env:
+          SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}
+        run: >-
+          rsync -az --delete
+          --exclude .git/
+          --filter=':- .gitignore'
+          ./ "deployuser@$SSH_HOST:/opt/assistants/app/"
+      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}
+        run: ssh "deployuser@$SSH_HOST" 'sh /opt/assistants/app/scripts/deploy-webtropia.sh'

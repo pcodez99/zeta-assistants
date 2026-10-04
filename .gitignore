@@ -89,3 +89,7 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# Production credentials
+.env.production
+firmware/**/secrets.h

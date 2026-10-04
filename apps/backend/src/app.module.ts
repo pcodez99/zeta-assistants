@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WeatherModule } from './weather/weather.module';
+import { HealthController } from './health.controller';
 import { SettingsModule } from './settings/settings.module';
 
 // Compute frontend dist path dynamically to support both dev execution and dist/ compilation
@@ -17,6 +18,7 @@ if (!existsSync(frontendPath)) {
 }
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,

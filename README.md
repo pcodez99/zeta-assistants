@@ -5,7 +5,7 @@ MeteoStation is a lightweight, responsive monorepo application to manage users, 
 ## Architecture
 
 * **Frontend**: Built with **Vite**, **React**, **TypeScript**, **TanStack Router**, **TanStack Query**, **Tailwind CSS v4**, and **Recharts**.
-  * **Real-time**: The frontend queries the ESP32 directly on the local network (CORS enabled) via its IP address (configured in settings).
+  * **Latest readings**: The frontend polls the backend `/api/weather/latest` every 10 seconds; the ESP32 sends readings to the backend. No browser access to the local network is needed.
   * **Historical**: The frontend queries the NestJS backend to retrieve historical weather trends.
 * **Backend**: Built with **NestJS**, **Prisma**, and **PostgreSQL**. Exposes `/api/auth` for authentication, `/api/settings` for ESP32 configuration, and `/api/weather` for reports and history.
 * **Shared Schema**: `@repo/schema` contains typescript types and zod validations shared between apps.
@@ -71,16 +71,13 @@ curl -X POST http://localhost:3000/api/weather/report \
   -d '{"temperature": 21.8, "humidity": 45.5, "pressure": 1012.3}'
 ```
 
-### 3. ESP32 Local Server (Real-time)
-The frontend dashboard queries the ESP32 directly via its IP address to display live metrics. The ESP32 must expose a `/data` HTTP GET endpoint returning:
-```json
-{
-  "temperature": 21.8,
-  "humidity": 45.5,
-  "pressure": 1012.3
-}
-```
-*Note: Ensure the ESP32 HTTP response headers include `Access-Control-Allow-Origin: *` to prevent CORS issues in the browser.*
+### 3. Latest reading
+
+Authenticated clients call `GET /api/weather/latest`. The response is
+`{"reading": null}` before the first report, then `{"reading": {...}}` with
+`temperature`, `humidity`, `pressure`, `id`, and `createdAt`.
+The dashboard shows the last reception time and marks readings older than ten
+minutes as outdated. Missing readings are never replaced with demo values.
 
 ---
 
@@ -99,3 +96,52 @@ To compile the frontend static files and serve them directly from the NestJS bac
    pnpm --filter backend start:prod
    ```
    The backend will now serve the frontend static files at `http://localhost:3000` and expose the API at `http://localhost:3000/api`.
+
+## Webtropia production
+
+The deployment follows the glucose layout:
+
+- Application: `/opt/assistants/app`, Compose project `assistants`.
+- Secrets: `/opt/assistants/.env.production` (mode 600), never committed.
+- PostgreSQL 17 in Docker with persistent `assistants_postgres_data` volume,
+  on a private internal network with no published database port.
+- App bound to `127.0.0.1:9522`, served by OpenLiteSpeed at
+  `https://assistants.zetalinks.it`.
+- Liveness and database check: `GET /api/health`.
+
+Required environment variables are `POSTGRES_PASSWORD`, `JWT_SECRET`,
+`REFRESH_JWT_SECRET`, and `WEATHER_API_KEY`. Generate independent random values;
+use a hexadecimal database password so the database URL needs no escaping.
+
+After syncing the source, run `sh scripts/deploy-webtropia.sh` on the server.
+The script builds the image, starts PostgreSQL, applies Prisma migrations and
+waits for the application health check. Do not run `docker compose down -v`,
+which would delete the database volume.
+
+Backup:
+
+```sh
+cd /opt/assistants/app
+docker compose --env-file /opt/assistants/.env.production -f compose.prod.yml \
+  exec -T postgres pg_dump -U assistants -d assistants -Fc \
+  > /opt/assistants/backups/assistants-$(date +%Y%m%d-%H%M%S).dump
+```
+
+The current firmware `esp32_oled_test` only displays local readings. The Wi-Fi
+firmware must send HTTPS reports with the private `x-api-key` to populate the
+dashboard. The repository currently permits account registration; every
+registered account can view the shared station readings.
+
+### Automatic deployment (same workflow as glucose)
+
+`.github/workflows/deploy-webtropia.yml` runs on pushes to `main` and manual
+`workflow_dispatch`. It builds and runs API integration checks with a disposable
+PostgreSQL database, then uploads the release with rsync as `deployuser` and runs
+the server deploy script. The GitHub `Production` environment requires:
+
+- `WEBTROPIA_HOST`
+- `WEBTROPIA_SSH_PRIVATE_KEY` (dedicated deployment key)
+- `WEBTROPIA_SSH_KNOWN_HOSTS` (verified server host key)
+
+The `deployuser` account must own `/opt/assistants` and be able to use Docker.
+Application/database secrets stay on the server, outside the rsync destination.

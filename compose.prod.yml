@@ -1,0 +1,55 @@
+name: assistants
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: assistants
+      POSTGRES_USER: assistants
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assistants -d assistants"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  app:
+    image: assistants-app:latest
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: "postgresql://assistants:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/assistants?schema=public"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      JWT_EXPIRES_IN: 15m
+      REFRESH_JWT_SECRET: "${REFRESH_JWT_SECRET:?REFRESH_JWT_SECRET is required}"
+      REFRESH_JWT_EXPIRES_IN: 7d
+      WEATHER_API_KEY: "${WEATHER_API_KEY:?WEATHER_API_KEY is required}"
+      FRONTEND_URL: https://assistants.zetalinks.it
+    ports:
+      - "127.0.0.1:9522:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal, web]
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+networks:
+  internal:
+    internal: true
+  web:
+
+volumes:
+  postgres_data:
