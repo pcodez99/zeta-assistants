@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useRouter } from '@tanstack/react-router';
 import axios from 'axios';
 import { setAccessToken } from '../lib/api';
-import { CloudSun, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Zap, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -50,11 +50,11 @@ export const Register: React.FC = () => {
     <div className="mx-auto w-full max-w-md p-6">
       <div className="flex flex-col items-center space-y-2 text-center mb-8">
         <div className="p-3 bg-primary/10 rounded-full text-primary">
-          <CloudSun className="h-10 w-10 animate-bounce" />
+          <Zap className="h-10 w-10" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Crea un Account</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Crea il tuo account</h1>
         <p className="text-sm text-muted-foreground">
-          Configura e monitora la tua stazione meteo ESP32
+          Entra in zeta-assistant e monitora la tua stazione ESP32
         </p>
       </div>
 

@@ -127,9 +127,9 @@ docker compose --env-file /opt/assistants/.env.production -f compose.prod.yml \
   > /opt/assistants/backups/assistants-$(date +%Y%m%d-%H%M%S).dump
 ```
 
-The current firmware `esp32_oled_test` only displays local readings. The Wi-Fi
-firmware must send HTTPS reports with the private `x-api-key` to populate the
-dashboard. The repository currently permits account registration; every
+The firmware `esp32_oled_test` only displays local readings. Use
+`firmware/esp32_station/esp32_station.ino` for Wi-Fi and authenticated HTTPS
+reports; see its README and configure the ignored `secrets.h` file. The repository currently permits account registration; every
 registered account can view the shared station readings.
 
 ### Automatic deployment (same workflow as glucose)
