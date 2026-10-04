@@ -19,11 +19,11 @@ export class AuthService {
   async validateLocalUser(email: string, pass: string) {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email o password non corretti.');
     }
     const isMatch = bcrypt.compareSync(pass, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email o password non corretti.');
     }
     return { id: user.id, email: user.email, role: user.role };
   }
@@ -31,12 +31,12 @@ export class AuthService {
   async login(email: string, password: string, req: Request): Promise<AuthResponse> {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email o password non corretti.');
     }
 
     const isMatch = bcrypt.compareSync(password, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Email o password non corretti.');
     }
 
     return this.issueAuthSession(user, req);
@@ -79,7 +79,9 @@ export class AuthService {
   }
 
   async generateTokens(userId: string) {
-    const payload = { sub: userId };
+    const user = await this.usersService.findOneById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+    const payload = { sub: userId, version: user.passwordVersion };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload),
       this.jwtService.signAsync(payload, this.refreshTokenConfig),
@@ -90,10 +92,10 @@ export class AuthService {
     };
   }
 
-  async validateJwtUser(userId: string) {
+  async validateJwtUser(userId: string, version = 0) {
     const user = await this.usersService.findOneById(userId);
-    if (!user) {
-      throw new UnauthorizedException('User not found in token');
+    if (!user || user.passwordVersion !== version) {
+      throw new UnauthorizedException('Session expired');
     }
     return {
       id: user.id,
@@ -105,14 +107,15 @@ export class AuthService {
     };
   }
 
-  async validateRefreshToken(userId: string, refreshToken: string, sessionId: string) {
+  async validateRefreshToken(userId: string, refreshToken: string, sessionId: string, version = 0) {
     const user = await this.usersService.findOneById(userId);
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
+    if (user.passwordVersion !== version) throw new UnauthorizedException('Session expired');
     const session = await this.usersService.findSessionById(sessionId);
-    if (!session) {
+    if (!session || session.userId !== userId) {
       throw new BadRequestException('Session not found');
     }
 

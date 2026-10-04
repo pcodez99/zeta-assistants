@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useSyncExternalStore } from 'react';
 import { Link, Outlet, useNavigate, useRouter } from '@tanstack/react-router';
 import { useTheme } from '../context/theme';
-import { getAccessToken, setAccessToken, api } from '../lib/api';
+import { getAccessToken, setAccessToken, subscribeAuth, api } from '../lib/api';
 import { Sun, Moon, LogOut, CloudSun, Settings, Home } from 'lucide-react';
 
 export const RootLayout: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const router = useRouter();
-  const isLoggedIn = !!getAccessToken();
+  const isLoggedIn = !!useSyncExternalStore(subscribeAuth, getAccessToken);
 
   useEffect(() => {
     const handleAuthExpired = () => {
@@ -29,7 +29,7 @@ export const RootLayout: React.FC = () => {
         console.error('Logout failed', err);
       }
     }
-    localStorage.clear();
+    for (const key of ['refreshToken', 'sessionId', 'name', 'username']) localStorage.removeItem(key);
     setAccessToken(null);
     navigate({ to: '/login' });
     router.invalidate();

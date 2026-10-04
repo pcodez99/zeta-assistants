@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useRouter } from '@tanstack/react-router';
-import { api, setAccessToken } from '../lib/api';
+import axios from 'axios';
+import { setAccessToken } from '../lib/api';
 import { CloudSun, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export const Register: React.FC = () => {
@@ -20,7 +21,7 @@ export const Register: React.FC = () => {
     setError(null);
 
     try {
-      const { data } = await api.post('/auth/register', {
+      const { data } = await axios.post('/api/auth/register', {
         name,
         username,
         email,
@@ -33,9 +34,8 @@ export const Register: React.FC = () => {
       localStorage.setItem('name', data.user.name);
       localStorage.setItem('username', data.user.username);
 
-      router.invalidate().then(() => {
-        navigate({ to: '/' });
-      });
+      await navigate({ to: '/', replace: true });
+      await router.invalidate();
     } catch (err: any) {
       setError(
         err.response?.data?.message || 

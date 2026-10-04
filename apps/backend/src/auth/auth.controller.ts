@@ -1,4 +1,7 @@
 import { Controller, UseGuards, Get, Put, Request, Post, Body, Req, Res, BadRequestException } from '@nestjs/common';
+import { PasswordResetService } from './password-reset.service';
+import { PasswordResetRateGuard } from './guards/password-reset-rate.guard';
+import { ForgotPasswordInputSchema, ResetPasswordInputSchema } from '@repo/schema';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { Public } from './decorators/public.decorators';
@@ -10,9 +13,28 @@ import { LoginInput, RegisterInput, ChangePasswordInput, AuthResponse } from '@r
 @Controller('auth')
 export class AuthController {
   constructor(
+    private readonly passwordReset: PasswordResetService,
     private authService: AuthService,
     private usersService: UsersService,
   ) {}
+
+  @Public()
+  @UseGuards(PasswordResetRateGuard)
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: unknown) {
+    const parsed = ForgotPasswordInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Inserisci un indirizzo email valido.');
+    return this.passwordReset.request(parsed.data.email);
+  }
+
+  @Public()
+  @UseGuards(PasswordResetRateGuard)
+  @Post('reset-password')
+  async resetPassword(@Body() body: unknown) {
+    const parsed = ResetPasswordInputSchema.safeParse(body);
+    if (!parsed.success) throw new BadRequestException('Link non valido oppure password non valida: usa da 8 a 72 caratteri (massimo 72 byte).');
+    return this.passwordReset.reset(parsed.data.token, parsed.data.password);
+  }
 
   @Public()
   @Post('login')

@@ -1,4 +1,4 @@
-"""Read OAuth secrets from SSH stdin; preserve unrelated production settings."""
+"""Read authentication secrets from SSH stdin; preserve unrelated production settings."""
 import json
 import os
 from pathlib import Path
@@ -7,17 +7,17 @@ import tempfile
 
 path = Path('/opt/assistants/.env.production')
 values = json.load(sys.stdin)
-expected = {'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'}
+expected = {'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'SMTP_FROM'}
 if set(values) != expected:
-    raise SystemExit('Expected Google OAuth credentials')
+    raise SystemExit('Expected OAuth and SMTP credentials')
 for value in values.values():
     if not isinstance(value, str) or not value or any(c in value for c in '\r\n\x00'):
-        raise SystemExit('Missing or invalid Google OAuth credential')
+        raise SystemExit('Missing or invalid authentication credential')
 lines = [line for line in path.read_text().splitlines() if line.split('=', 1)[0] not in expected]
 for key, value in values.items():
     # Compose dotenv single quotes preserve dollar signs and backslashes.
     if "'" in value:
-        raise SystemExit('Unsupported quote in Google OAuth credential')
+        raise SystemExit('Unsupported quote in authentication credential')
     lines.append(f"{key}='{value}'")
 fd, temporary = tempfile.mkstemp(dir=path.parent, prefix='.oauth-env-')
 try:
@@ -27,4 +27,4 @@ try:
 finally:
     if os.path.exists(temporary):
         os.unlink(temporary)
-print('Google OAuth configuration updated')
+print('OAuth and SMTP configuration updated')

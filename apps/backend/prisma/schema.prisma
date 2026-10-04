@@ -24,6 +24,10 @@ model User {
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   sessions               Session[]
+  passwordVersion        Int                  @default(0)
+  passwordResetHash      String?              @unique
+  passwordResetExpiresAt DateTime?
+  passwordResetSentAt    DateTime?
 
   @@map("user")
 }

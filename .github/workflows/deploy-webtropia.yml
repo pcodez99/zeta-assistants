@@ -16,6 +16,9 @@ jobs:
   validate:
     runs-on: ubuntu-24.04
     services:
+      mailpit:
+        image: axllent/mailpit:latest
+        ports: ["1025:1025", "8025:8025"]
       postgres:
         image: postgres:17-alpine
         env:
@@ -33,12 +36,17 @@ jobs:
       REFRESH_JWT_SECRET: ci-only-refresh-token-signing-secret
       REFRESH_JWT_EXPIRES_IN: 7d
       WEATHER_API_KEY: ci-only-weather-api-key
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      SMTP_FROM: assistant@example.invalid
+      MAILPIT_URL: http://localhost:8025
       NODE_ENV: test
       FRONTEND_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
       - run: pnpm build
+      - run: node scripts/frontend-auth-test.cjs
       - run: git diff --check
       - run: pnpm --filter backend prisma:deploy
       - name: Verify API and ingestion
@@ -80,13 +88,18 @@ jobs:
           --exclude .git/
           --filter=':- .gitignore'
           ./ "deployuser@$SSH_HOST:/opt/assistants/app/"
-      - name: Configure Google OAuth
+      - name: Configure OAuth and SMTP
         env:
           SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
         run: |
-          python3 -c 'import json,os; print(json.dumps({key: os.environ[key] for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET")}))' | ssh "deployuser@$SSH_HOST" 'python3 /opt/assistants/app/scripts/configure-google-oauth.py'
+          python3 -c 'import json,os; print(json.dumps({key: os.environ[key] for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "SMTP_FROM")}))' | ssh "deployuser@$SSH_HOST" 'python3 /opt/assistants/app/scripts/configure-production-auth.py'
       - name: Deploy
         env:
           SSH_HOST: ${{ secrets.WEBTROPIA_HOST }}

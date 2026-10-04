@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useRouter } from '@tanstack/react-router';
-import { api, setAccessToken } from '../lib/api';
+import axios from 'axios';
+import { setAccessToken } from '../lib/api';
 import { CloudSun, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
@@ -18,7 +19,7 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data } = await axios.post('/api/auth/login', { email: email.trim(), password });
       setAccessToken(data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
       localStorage.setItem('sessionId', data.sessionId);
@@ -26,12 +27,11 @@ export const Login: React.FC = () => {
       localStorage.setItem('username', data.user.username);
 
       // Invalidate router so beforeLoad re-evaluates
-      router.invalidate().then(() => {
-        navigate({ to: '/' });
-      });
+      await navigate({ to: '/', replace: true });
+      await router.invalidate();
     } catch (err: any) {
       setError(
-        err.response?.data?.message || 
+        (err.response?.status === 401 ? 'Email o password non corretti.' : err.response?.data?.message) ||
         'Impossibile connettersi al server. Riprova più tardi.'
       );
     } finally {
@@ -54,7 +54,7 @@ export const Login: React.FC = () => {
       <div className="bg-card border border-border p-8 rounded-2xl shadow-xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-lg">
+            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
               {error}
             </div>
           )}
@@ -65,6 +65,7 @@ export const Login: React.FC = () => {
             </label>
             <input
               id="email"
+              autoComplete="email"
               type="email"
               placeholder="nome@esempio.com"
               value={email}
@@ -82,6 +83,7 @@ export const Login: React.FC = () => {
             <div className="relative">
               <input
                 id="password"
+                autoComplete="current-password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
@@ -100,6 +102,8 @@ export const Login: React.FC = () => {
               </button>
             </div>
           </div>
+
+          <Link to="/forgot-password" className="block text-sm text-primary underline text-right">Password dimenticata?</Link>
 
           <button
             type="submit"

@@ -7,6 +7,7 @@ import { AuthService } from "../auth.service";
 
 interface AuthJwtPayload {
   sub: string;
+  version?: number;
   iat?: number;
   exp?: number;
 }
@@ -30,6 +31,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   validate(payload: AuthJwtPayload) {
     const userId = payload.sub;
-    return this.authService.validateJwtUser(userId);
+    return this.authService.validateJwtUser(userId, payload.version ?? 0);
   }
 }

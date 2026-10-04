@@ -39,6 +39,10 @@ async function run() {
   });
   assert.equal(registered.status, 201);
   const session = await registered.json();
+  const wrongLogin = await call('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: 'definitely-wrong' }) });
+  assert.equal(wrongLogin.status, 401);
+  const caseLogin = await call('/auth/login', { method: 'POST', body: JSON.stringify({ email: `  ${email.toUpperCase()}  `, password: `Smoke-${suffix}` }) });
+  assert.equal(caseLogin.status, 201, 'Email case and whitespace do not prevent login');
   const authorization = { Authorization: `Bearer ${session.accessToken}` };
   const initial = await call("/weather/latest", { headers: authorization });
   assert.equal(initial.status, 200);
@@ -54,6 +58,7 @@ async function run() {
   assert.ok(!Number.isNaN(Date.parse(latest.reading.createdAt)));
   const history = await (await call("/weather/history?range=24h", { headers: authorization })).json();
   assert.ok(history.some(row => row.id === readingId));
+  await require('./password-reset-test.cjs')({ prisma, call, email, session, oldPassword: `Smoke-${suffix}` });
   console.log("PASS: health, frontend, authentication, validation, ingestion, latest reading and history");
 }
 

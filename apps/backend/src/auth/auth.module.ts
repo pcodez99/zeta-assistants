@@ -1,3 +1,6 @@
+import { MailService } from './mail.service';
+import { PasswordResetService } from './password-reset.service';
+import { PasswordResetRateGuard } from './guards/password-reset-rate.guard';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthService } from './auth.service';
@@ -25,6 +28,9 @@ import { PassportModule } from '@nestjs/passport';
     ConfigModule.forFeature(googleAuthConfig),
   ],
   providers: [
+    MailService,
+    PasswordResetService,
+    PasswordResetRateGuard,
     AuthService,
     LocalStrategy,
     JwtStrategy,

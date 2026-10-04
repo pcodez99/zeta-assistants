@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../lib/api';
+import { api, setAccessToken } from '../lib/api';
 import { ShieldCheck, Cpu } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
@@ -21,7 +21,9 @@ export const SettingsPage: React.FC = () => {
       setPwSuccess(true);
       setCurrentPassword('');
       setNewPassword('');
-      setTimeout(() => setPwSuccess(false), 3000);
+      for (const key of ['refreshToken', 'sessionId']) localStorage.removeItem(key);
+      setAccessToken(null);
+      setTimeout(() => window.dispatchEvent(new Event('auth-expired')), 2000);
     } catch (err: any) {
       setPwError(err.response?.data?.message || 'Errore nel cambio password.');
     }
@@ -66,7 +68,7 @@ export const SettingsPage: React.FC = () => {
             )}
             {pwSuccess && (
               <div className="p-2 text-xs text-green-700 bg-green-100 border border-green-200 rounded-lg">
-                Password aggiornata con successo!
+                Password aggiornata. Tra poco tornerai al login per accedere nuovamente.
               </div>
             )}
 

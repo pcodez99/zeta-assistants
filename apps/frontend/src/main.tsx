@@ -23,17 +23,17 @@ const initializeApp = async () => {
   const refreshToken = localStorage.getItem('refreshToken');
   const sessionId = localStorage.getItem('sessionId');
 
-  if (refreshToken && sessionId) {
+  if (refreshToken && sessionId && window.location.pathname !== '/auth/google/callback') {
     try {
       const { data } = await axios.post('/api/auth/refresh', {
         refresh: refreshToken,
         sessionId,
-      });
+      }, { timeout: 10000 });
       setAccessToken(data.accessToken);
       localStorage.setItem('refreshToken', data.refreshToken);
     } catch (err) {
       console.warn('Session restoration failed:', err);
-      localStorage.clear();
+      for (const key of ['refreshToken', 'sessionId', 'name', 'username']) localStorage.removeItem(key);
     }
   }
 

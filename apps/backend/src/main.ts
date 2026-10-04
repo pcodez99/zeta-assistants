@@ -12,6 +12,8 @@ async function bootstrap() {
     bodyParser: true,
   });
 
+  // OpenLiteSpeed is the single trusted reverse proxy in production.
+  if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
   app.setGlobalPrefix('api');
 
   app.useBodyParser('json', { limit: '10mb' });

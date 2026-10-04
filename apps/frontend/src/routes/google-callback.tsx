@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate, useRouter } from '@tanstack/react-router';
 import { setAccessToken } from '../lib/api';
 import { Loader2 } from 'lucide-react';
@@ -6,8 +6,11 @@ import { Loader2 } from 'lucide-react';
 export const GoogleCallback: React.FC = () => {
   const navigate = useNavigate();
   const router = useRouter();
+  const processed = useRef(false);
 
   useEffect(() => {
+    if (processed.current) return;
+    processed.current = true;
     const params = new URLSearchParams(window.location.search);
     const accessToken = params.get('accessToken');
     const refreshToken = params.get('refreshToken');
@@ -22,12 +25,11 @@ export const GoogleCallback: React.FC = () => {
       if (name) localStorage.setItem('name', name);
       if (username) localStorage.setItem('username', username);
 
-      router.invalidate().then(() => {
-        navigate({ to: '/' });
-      });
+      window.history.replaceState(window.history.state, '', window.location.pathname);
+      void navigate({ to: '/', replace: true }).then(() => router.invalidate());
     } else {
       console.error('Google Auth callback missing parameters');
-      navigate({ to: '/login' });
+      void navigate({ to: '/login', replace: true });
     }
   }, [navigate, router]);
 

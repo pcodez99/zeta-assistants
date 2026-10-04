@@ -8,6 +8,7 @@ import { Request } from "express";
 
 interface AuthJwtPayload {
   sub: string;
+  version?: number;
   iat?: number;
   exp?: number;
 }
@@ -34,6 +35,6 @@ export class RefreshStrategy extends PassportStrategy(Strategy, "refresh-jwt") {
     const userId = payload.sub;
     const refreshToken = req.body.refresh;
     const sessionId = req.body.sessionId;
-    return this.authService.validateRefreshToken(userId, refreshToken, sessionId);
+    return this.authService.validateRefreshToken(userId, refreshToken, sessionId, payload.version ?? 0);
   }
 }

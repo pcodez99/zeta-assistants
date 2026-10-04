@@ -4,6 +4,7 @@ import { Dashboard } from './routes/dashboard';
 import { Login } from './routes/login';
 import { Register } from './routes/register';
 import { SettingsPage } from './routes/settings';
+import { ForgotPassword, ResetPassword } from './routes/password-recovery';
 import { GoogleCallback } from './routes/google-callback';
 import { getAccessToken } from './lib/api';
 
@@ -62,7 +63,17 @@ const googleCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/google/callback',
   component: GoogleCallback,
-  beforeLoad: redirectIfLoggedIn,
+});
+
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  component: ForgotPassword,
+});
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPassword,
 });
 
 // Assemble Route Tree
@@ -72,6 +83,8 @@ const routeTree = rootRoute.addChildren([
   registerRoute,
   settingsRoute,
   googleCallbackRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
 ]);
 
 // Create Router instance

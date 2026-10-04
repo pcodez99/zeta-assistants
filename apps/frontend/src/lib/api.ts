@@ -2,9 +2,15 @@ import axios from 'axios';
 
 // In-memory access token cache
 let _accessToken: string | null = null;
+const authListeners = new Set<() => void>();
+export const subscribeAuth = (listener: () => void) => {
+  authListeners.add(listener);
+  return () => { authListeners.delete(listener); };
+};
 
 export const setAccessToken = (token: string | null) => {
   _accessToken = token;
+  authListeners.forEach(listener => listener());
 };
 
 export const getAccessToken = () => _accessToken;
@@ -66,8 +72,9 @@ api.interceptors.response.use((response) => response, async (error) => {
 
     if (!refreshToken || !sessionId) {
       isRefreshing = false;
+      processQueue(error, null);
       // Clear storage and redirect
-      localStorage.clear();
+      for (const key of ['refreshToken', 'sessionId', 'name', 'username']) localStorage.removeItem(key);
       setAccessToken(null);
       window.dispatchEvent(new Event('auth-expired'));
       return Promise.reject(error);
@@ -93,7 +100,7 @@ api.interceptors.response.use((response) => response, async (error) => {
     } catch (refreshError) {
       isRefreshing = false;
       processQueue(refreshError, null);
-      localStorage.clear();
+      for (const key of ['refreshToken', 'sessionId', 'name', 'username']) localStorage.removeItem(key);
       setAccessToken(null);
       window.dispatchEvent(new Event('auth-expired'));
       return Promise.reject(refreshError);

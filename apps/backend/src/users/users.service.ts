@@ -24,7 +24,7 @@ export class UsersService {
 
     return this.prisma.client.user.create({
       data: {
-        email: input.email,
+        email: input.email.trim().toLowerCase(),
         username: input.username.toLowerCase().trim(),
         name: input.name,
         password: hashedPassword,
@@ -35,7 +35,7 @@ export class UsersService {
   }
 
   findOneByEmail(email: string): Promise<User | null> {
-    return this.prisma.client.user.findUnique({ where: { email } });
+    return this.prisma.client.user.findFirst({ where: { email: { equals: email.trim(), mode: 'insensitive' } } });
   }
 
   findOneByUsername(username: string): Promise<User | null> {
@@ -58,10 +58,13 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(newPass, 10);
-    await this.prisma.client.user.update({
-      where: { id },
-      data: { password: hashedPassword },
-    });
+    await this.prisma.client.$transaction([
+      this.prisma.client.user.update({
+        where: { id },
+        data: { password: hashedPassword, passwordVersion: { increment: 1 }, passwordResetHash: null, passwordResetExpiresAt: null },
+      }),
+      this.prisma.client.session.deleteMany({ where: { userId: id } }),
+    ]);
 
     return { success: true };
   }
@@ -76,7 +79,7 @@ export class UsersService {
     if (data.email && data.email !== existingUser.email) {
       const byEmail = await this.findOneByEmail(data.email);
       if (byEmail) throw new BadRequestException('Email already in use');
-      updateData.email = data.email;
+      updateData.email = data.email.trim().toLowerCase();
     }
 
     if (data.username && data.username !== existingUser.username) {

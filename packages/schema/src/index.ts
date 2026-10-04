@@ -81,3 +81,15 @@ export const UpdateSettingsInputSchema = z.object({
   esp32Address: z.string().min(1, "ESP32 address is required"),
 });
 export type UpdateSettingsInput = z.infer<typeof UpdateSettingsInputSchema>;
+
+// Password recovery: bcrypt accepts at most 72 bytes.
+export const ForgotPasswordInputSchema = z.object({
+  email: z.string().trim().email().max(254),
+});
+export const ResetPasswordInputSchema = z.object({
+  token: z.string().regex(/^[a-f0-9]{64}$/),
+  password: z.string().min(8).max(72).refine(
+    value => new TextEncoder().encode(value).length <= 72,
+    'La password deve contenere al massimo 72 byte',
+  ),
+});
